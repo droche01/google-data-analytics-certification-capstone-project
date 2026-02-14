@@ -1,0 +1,1271 @@
+---
+title: "Bellabeat Data Analysis Case Study -- Google Data Analytics Certification
+  Capstone Project"
+author: "Dylan Roche"
+date: "2026-02-14"
+output: 
+    cleanrmd::html_document_clean:
+      theme: latex.css
+      toc: true
+      toc_float: true
+      toc_depth: 1
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE)
+```
+
+# **I. Introduction / Background**
+
+Founded in 2014 by Urška Sršen and Sandro Mur, Bellabeat is a health and fitness technology company that primarily develops smart wellness products for women. Some of its key products include the following:
+
+-   **Leaf:** A versatile wearable that tracks a user's activity, sleep, and stress
+-   **Time:** A smart watch that monitors a user's activity, sleep, and stress
+-   **Spring:** A water bottle that tracks a user's daily water intake
+
+These devices connect to a dedicated Bellabeat app from which users can view activity, sleep, stress, and menstrual cycle data and make informed decisions about their health.
+
+Bellabeat has offices located in North America, Europe, and Asia and relies mainly on digital marketing as its advertising strategy. Specifically, it has invested heavily in Google Search, maintains active social media pages that drive consumer engagement, and runs video ad campaigns on YouTube.
+
+Even though Bellabeat has already seen substantial success as a small company, it desires to become a larger player in the wellness and technology space. Therefore, Sršen believes that an inquiry into available consumer data would unveil key insights and unlock more opportunities for growth.
+
+To support this goal, I have assumed the role of a junior data analyst and will conduct a comprehensive analysis on user activity data. The insights obtained from this analysis will be leveraged to develop high-level recommendations for Bellabeat's marketing strategy.
+
+My data analysis will be documented across the following phases:
+
+-   **Ask:** Identify the business problem at hand and determine how data-driven insights gained can inform decision-making
+-   **Prepare:** Determine where the data is located and evaluate any potential issues, like bias or credibility
+-   **Process**: Select the tools used for analysis and ensure that the data is both clean and accurate
+-   **Analyze**: Organize the data and pinpoint key trends, patterns, and relationships
+-   **Share**: Communicate findings through effective visualizations and storytelling for stakeholders
+-   **Act**: Apply the insights gained to make informed business recommendations and decisions
+
+
+# **II. The Ask Phase**
+
+During the Ask phase, the business task must be determined.
+
+## *Business Task*
+
+Using available daily user activity data, determine key trends in smart device usage to identify when users are least and most active. Furthermore, scrutinize potential relationships between different kinds of activity, as well as correlations between activity and sleep data. These insights will be applied to Bellabeat's **Leaf**--a wellness tracker than can be worn as a bracelet, necklace, or clip--to better understand user behavior and influence product and marketing decisions.
+
+
+# **III. The Prepare Phase**
+
+During the Prepare phase, the data is gathered and evaluated to ensure its accuracy, credibility, and integrity.
+
+The [FitBit Fitness Tracker Data dataset](https://www.kaggle.com/datasets/arashnic/fitbit), initially published on Zenodo and subsequently made available through Mobius on Kaggle, is used for this analysis.
+
+## *Dataset Information*
+
+The dataset consists of personal tracker data from approximately 30 FitBit users. In particular, it includes minute-level measurements for physical activity, sleep monitoring, and heart rate, as well as daily summaries of activity, step counts, calories burned, and other comparable metrics. For this analysis, to ensure that the data is consistent is possible and streamlined, I've decided to work strictly with daily-level data over a one-month period.
+
+The information was collected through **Amazon Mechnical Turk** (**MTurk**)--a crowdsourcing marketplace that allows individuals to remotely complete tasks. As part of the study, participants voluntarily submitted their personal FitBit data.
+
+Data was collected over a one-month period, from April 12, 2016 to May 12, 2016. Even though the dataset is not recent, user activity patterns related to daily movement and sleep behavior are not expected to significantly deviate if the study was conducted today, making the dataset acceptable for analysis.
+
+## *Dataset Issues*
+
+While the sample of size of approximately 30 users is sufficient for this analysis, it is not large enough to properly represent the broader smart device user population. This therefore introduces selection bias, as the participants are not indicative of all This is known as selection bias.
+
+Since the data was voluntarily submitted by users, the dataset is also subject to self-selection bias. Individuals who took part in the study are more likely to be health-conscious, physically and technologically savvy than the average consumer. Moreover, given that the data is derived only from FitBit users, it may not reflect usage patterns affiliated with other wearable devices.
+
+## *Dataset Limitations*
+
+Participant-level information remains limited, as data on age, gender, and location was not disclosed. This restricts the ability segment users and analyze behavioral differences across demographic groups.
+
+Some users did not consistently enter activity on specific days, and not all metrics were recorded uniformly across all participants. These inconsistencies could potentially impact trend analysis and restrict the accuracy of comparisons across users.
+
+
+# **IV. The Process Phase**
+
+During the Process phase, the tools used for analysis are determined, and the data is cleaned.
+
+## *Analysis Tools*
+
+There are a variety of tools that can be utilized for data analysis,including Microsoft Excel, SQL, Python, and R. Often, a data analysis workflow spans numerous programs, with each tool serving a unique purpose.For this analysis, Microsoft Excel was used for initial data cleaning and basic feature engineering, while R was selected for more complex dataset preprocessing, feature engineering, and dataset transformation tasks.
+
+## *Initial Data Cleaning and Feature Engineering in Microsoft Excel*
+
+To begin, the **Daily Activity (Merged)** CSV file opened in Microsoft Excel to gain an initial understanding of the dataset--specifically, the columns, structure, and overall distribution. The data was presented in a **wide format**, meaning that multiple related metrics are distributed across different columns. While this format does not pose any immediate challenges for analysis, subsets of the data were later converted to **long format** to facilitate data visualization.
+
+Excel's built-in *Remove Duplicates* feature was used to check duplicates entries; none were found. Next, missing values were assessed using the *Find & Select* feature to identify blank cells, and no missing data was detected. The data column was then reformatted to **YYYY-MM-DD**, ensuring consistency with R's date format and enabling a seamless transition between tools.
+
+Understanding the **type of day**--whether a weekday or weekend--can prove particularly useful when analyzing activity patterns. Thus, an *IsWeekend* column was added to the dataset by writing the formula: `=WEEKDAY(B2, 2) \> 5`, which returns `TRUE` for weekend dates and `FALSE` for weekdays.
+
+## *Data Processing and Feature Engineering in R*
+
+First, the required libraries were installed and loaded into R. Next, the **Daily Activity**, **Daily Sleep**, and **Weight Log** datasets were imported.
+
+```{r loading packages, echo=TRUE, message=FALSE}
+# Loading in the required packages 
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(ggcorrplot)
+```
+
+```{r loading datasets, echo=TRUE, error=FALSE, results=FALSE}
+# Importing the "Daily Activity" dataset
+daily_activity <- read.csv("C:/Users/melfl/Downloads/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/DailyActivityDataset.csv")
+head(daily_activity)
+glimpse(daily_activity)
+
+# Importing the "Daily Sleep" dataset 
+daily_sleep <- read.csv("C:/Users/melfl/Downloads/archive (1)/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/DailySleepDataset.csv")
+head(daily_sleep)
+glimpse(daily_sleep)
+
+# Importing the "Weight Log" dataset
+weight_log <- read.csv("C:/Users/melfl/Downloads/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/weightLogInfo_merged.csv")
+head(weight_log)
+glimpse(weight_log)
+
+activity_df = read.csv("C:/Users/melfl/Downloads/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+```
+
+Once the datasets were imported, the number of participants included in each dataset was calculated.
+
+```{r counting participants, echo=TRUE, message=FALSE, error=FALSE}
+
+activity_df = read.csv("C:/Users/melfl/Downloads/archive/mturkfitbit_export_4.12.16-5.12.16/Fitabase Data 4.12.16-5.12.16/dailyActivity_merged.csv")
+
+# Finding the number of participants in each dataset
+activity_participants <- n_distinct(activity_df$Id)
+sleep_participants <- n_distinct(daily_sleep$Id)
+weight_participants <- n_distinct(weight_log$Id)
+print(activity_participants)
+print(sleep_participants)
+print(weight_participants)
+```
+
+The results of the above calculations were then visualized via a bar chart.
+
+```{r plotting participants, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Putting the counts into a separate dataframe and visualizing the results
+datasets_df <- data.frame(
+  dataset = c("Activity", "Sleep", "Weight"),
+  participants = c(activity_participants, sleep_participants, weight_participants)
+  
+)
+
+# Bar chart showing the distribution of participants, stratified by dataset
+ggplot(data = datasets_df, aes(x=dataset, y=participants, fill=dataset))+
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=c("firebrick1", "darkolivegreen1", "dodgerblue1"))+
+  labs(x = "Dataset Title", y = "No. of Participants", title="Distribution of Participants by Dataset", fill= "Dataset Title",
+       subtitle = "Across the Activity, Sleep, and Weight datasets",
+       caption = "Data collected from Fitbit users from April to May 2016. The Weight dataset has 8 participants, far below the recommended minimum of 30, and will be omitted from this analysis.")+
+  theme_bw()+
+  theme(plot.title = element_text(face ="bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12),
+        plot.caption = element_text(face = "italic", size = 8))
+
+```
+
+In statistics, the [Central Limit Theorem](https://www.scribbr.com/statistics/central-limit-theorem/) states that, as the sample sizes increases, the sampling distribution of the mean increasingly approaches a normal distribution. A regularly used rule of thumb is that a sample size of *n* ≥ 30 is acceptable for this approximation.
+
+The Weight dataset only contains 8 participants, which is well below this guideline. Therefore, it will not be included in this analysis. The Sleep dataset consists of 24 participants, which is slightly below the recommended threshold; however, it will be kept for **exploratory data analysis** (**EDA**) and to examine potential correlations between activity and sleep patterns.
+
+Even though the date column was reformatted in Excel earlier, R still intreprets it as a string rather than a date.
+
+```{r checking data-types, echo=TRUE, error=FALSE}
+
+glimpse(daily_activity)
+glimpse(daily_sleep)
+
+```
+
+Therefore, it is necessary to convert the data variables in both datasets to the proper date type. Afterwards, columns not required for the analysis were removed.
+
+```{r typecasting variables, echo=TRUE, error=FALSE, results=FALSE}
+
+# Converting "ActivityDate" to a date-type
+daily_activity$ActivityDate_Fixed <- ymd(daily_activity$ActivityDate) 
+daily_activity <- select(daily_activity, Id, -ActivityDate, ActivityDate_Fixed, 3:5, -LoggedActivitiesDistance, 7:16) 
+glimpse(daily_activity) 
+head(daily_activity)
+
+
+# Converting "SleepDay" to a date-type 
+daily_sleep$SleepDate_Fixed <- ymd(daily_sleep$SleepDay) 
+daily_sleep <- select(daily_sleep, Id, -SleepDay, SleepDate_Fixed, 3:6) 
+glimpse(daily_sleep) 
+head(daily_sleep)
+
+```
+
+**Daily Activity Dataset:**
+
+```{r viewing daily activity dataset, echo=FALSE, error=FALSE}
+
+glimpse(daily_activity) 
+head(daily_activity)
+
+```
+
+**Daily Sleep Dataset:**
+
+```{r viewing daily sleep dataset, echo=FALSE, error=FALSE}
+
+glimpse(daily_sleep) 
+head(daily_sleep)
+
+```
+
+The number of missing and duplicate entries in both datasets were verified once more.
+
+```{r duplicates and missing values, echo=TRUE, error=FALSE}
+
+# Finding the number of missing values and duplicates in the "Daily Activity" dataset
+sum(is.na(daily_activity))
+sum(is.na(daily_sleep))
+sum(duplicated(daily_activity))
+
+# Finding the number of and removing the missing values and duplicates in the "Daily Sleep" dataset
+sum(duplicated(daily_sleep))
+duplicated(daily_sleep)
+
+```
+
+The three duplicates in the Daily Sleep dataset were removed.
+
+```{r removing duplicates and missing values, echo=TRUE, error=FALSE}
+
+# Removing th missing values and duplicates in the "Daily Sleep" dataset
+daily_sleep_clean <- daily_sleep[!duplicated(daily_sleep), ]
+sum(duplicated(daily_sleep_clean))
+
+```
+
+Now that both datasets were cleaned and checked for data integrity, they were joined utilizing a **left join** based on the shared identifier columns (primary keys). A left join was used to **preserve all records from the Daily Activity dataset**. Since the Daily Sleep contains fewer participants than the Daily Activity dataset, some activity records do not have corresponding sleep data; however, these entries were retained to avoid unnecessary data loss.
+
+```{r joining datasets, echo=TRUE, error=FALSE}
+
+# Combining the "Daily Activity" and "Daily Sleep" datasets with a left join
+fitness_data_df <- left_join(daily_activity, daily_sleep_clean, by= c("Id" = "Id", "ActivityDate_Fixed" = "SleepDate_Fixed", "IsWeekend" = "IsWeekend"))
+head(fitness_data_df)
+glimpse(fitness_data_df)
+
+```
+
+# **V. The Analyze Phase**
+
+During the Analyze phase, key trends, patterns, and relationships are determined within the data.
+
+## *Data Analysis on the Daily Activity Dataset*
+
+To begin, the key variables in the Daily Activity Dataset were analyzed.
+
+## *TotalSteps Analysis*
+
+Summary statistics were calculated for the *TotalSteps* variable--grouped by participant and type of day, respectively.
+
+```{r total steps, echo=TRUE, error=FALSE}
+
+# Summary statistics for "TotalSteps" (grouped by participant) 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_total_steps = mean(TotalSteps),
+    median_total_steps = median(TotalSteps), 
+    sd_total_steps = sd(TotalSteps),
+    min_total_steps = min(TotalSteps),
+    max_total_steps = max(TotalSteps),
+    iqr_total_steps = IQR(TotalSteps)
+  )
+
+# Summary statistics for "TotalSteps" (grouped by type of day)
+fitness_data_df %>% 
+  group_by(IsWeekend) %>% 
+  summarize(
+    mean_total_steps = mean(TotalSteps),
+    median_total_steps = median(TotalSteps), 
+    sd_total_steps = sd(TotalSteps),
+    min_total_steps = min(TotalSteps),
+    max_total_steps = max(TotalSteps),
+    iqr_total_steps = IQR(TotalSteps)
+  )
+
+
+```
+
+Grouping by ID can be useful for gleaning participant level insights; however, because key personal attributes (like age) were excluded from the dataset, it is more informative to aggregate data by **day type** (**weekday vs. weekend**).
+
+When aggregated in this fashion, **average step counts are slightly higher on weekdays than on weekdays**. This could be due to more structured daily routines, such as commuting. In contrast, the **standard deviation of step counts is higher on weekends**, indicating greater variability in activity levels and suggestion that individuals' weekend step counts are less predictable and structured.
+
+## *ActiveDistance Analysis*
+
+There are four categories of activity based on distanced traveled, ranked from highest to lowest intensity: **Very Active**, **Moderately Active**, **Light Active**, and **Sedentary Active**.
+
+```{r activity levels, echo=TRUE, error=FALSE, results=FALSE}
+
+# Summary statistics for "VeryActiveDistance" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_very_active_distance = mean(VeryActiveDistance),
+    median_very_active_distance = median(VeryActiveDistance), 
+    sd_very_active_distance = sd(VeryActiveDistance),
+    min_very_active_distance = min(VeryActiveDistance),
+    max_very_active_distance = max(VeryActiveDistance),
+    iqr_very_active_distance = IQR(VeryActiveDistance)
+  )
+
+# Summary statistics for "ModeratelyActiveDistance" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_moderately_active_distance = mean(ModeratelyActiveDistance),
+    median_moderately_active_distance = median(ModeratelyActiveDistance), 
+    sd_moderately_active_distance = sd(ModeratelyActiveDistance),
+    min_moderately_active_distance = min(ModeratelyActiveDistance),
+    max_moderately_active_distance = max(ModeratelyActiveDistance),
+    iqr_moderately_active_distance = IQR(ModeratelyActiveDistance)
+  )
+
+# Summary statistics for "LightActiveDistance" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_light_active_distance = mean(LightActiveDistance),
+    median_light_active_distance = median(LightActiveDistance), 
+    sd_light_active_distance = sd(LightActiveDistance),
+    min_light_active_distance = min(LightActiveDistance),
+    max_light_active_distance = max(LightActiveDistance),
+    iqr_light_active_distance = IQR(LightActiveDistance)
+  )
+
+# Summary statistics for "SedentaryActiveDistance" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_sedentary_active_distance = mean(SedentaryActiveDistance),
+    median_sedentary_active_distance = median(SedentaryActiveDistance), 
+    sd_sedentary_active_distance = sd(SedentaryActiveDistance),
+    min_sedentary_active_distance = min(SedentaryActiveDistance),
+    max_sedentary_active_distance = max(SedentaryActiveDistance),
+    iqr_sedentary_active_distance = IQR(SedentaryActiveDistance)
+  )
+
+```
+
+```{r activity level distance means, echo=TRUE, error=FALSE}
+
+# Average distance traveled by activity level
+fitness_data_df %>% 
+  summarize(
+    mean_very_active_distance = mean(VeryActiveDistance),
+    mean_moderately_active_distance = mean(ModeratelyActiveDistance),
+    mean_light_active_distance = mean(LightActiveDistance),
+    mean_sedentary_active_distance = mean(SedentaryActiveDistance),
+  )
+
+```
+
+The greatest distance traveled on average corresponded to **Light Active**, followed by **Very Active**, **Moderately Active**, and **Sedentary Active**. This pattern is reasonable because most daily movement transpires at light intensity, with high-intensity movement tending to be shorter and less frequently. Consequently, the **total distance accumulated in the Light Active category can exceed that of the Very Active category**. The **Sedentary Active** category shows extremely low distances, reflecting almost no movement.
+
+## *ActiveMinutes Analysis*
+
+There four categories of activity based on minutes active: **Very Active**, **Fairly Active**, **Lightly Active**, and **Sedentary Active**.
+
+```{r minute levels, echo=TRUE, error=FALSE, results=FALSE}
+
+# Summary statistics for "VeryActiveMinutes" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_very_active_minutes = mean(VeryActiveMinutes),
+    median_very_active_minutes= median(VeryActiveMinutes), 
+    sd_very_active_minutes = sd(VeryActiveMinutes),
+    min_very_active_minutes = min(VeryActiveMinutes),
+    max_very_active_minutes = max(VeryActiveMinutes),
+    iqr_very_active_minutes = IQR(VeryActiveMinutes)
+  )
+
+# Summary statistics for "FairlyActiveMinutes" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_fairly_active_minutes = mean(FairlyActiveMinutes),
+    median_fairly_active_minutes = median(FairlyActiveMinutes), 
+    sd_fairly_active_minutes = sd(FairlyActiveMinutes),
+    min_fairly_active_minutes = min(FairlyActiveMinutes),
+    max_fairly_active_minutes = max(FairlyActiveMinutes),
+    iqr_fairly_active_minutes = IQR(FairlyActiveMinutes)
+  )
+
+# Summary statistics for "LightlyActiveMinutes" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_lightly_active_minutes = mean(LightlyActiveMinutes),
+    median_lightly_active_minutes = median(LightlyActiveMinutes), 
+    sd_lightly_active_minutes = sd(LightlyActiveMinutes),
+    min_lightly_active_minutes = min(LightlyActiveMinutes),
+    max_lightly_active_minutes = max(LightlyActiveMinutes),
+    iqr_lightly_active_minutes = IQR(LightlyActiveMinutes)
+  )
+
+# Summary statistics for "SedentaryMinutes" 
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_sedentary_minutes = mean(SedentaryMinutes),
+    median_sedentary_minutes = median(SedentaryMinutes), 
+    sd_sedentary_minutes = sd(SedentaryMinutes),
+    min_sedentary_minutes = min(SedentaryMinutes),
+    max_sedentary_minutes = max(SedentaryMinutes),
+    iqr_sedentary_minutes = IQR(SedentaryMinutes)
+  )
+
+
+```
+
+```{r activity level minutes means, echo=TRUE, error=FALSE}
+
+# Average minutes active by activity level
+fitness_data_df %>% 
+  summarize(
+    mean_very_active_minutes = mean(VeryActiveMinutes),
+    mean_fairly_active_minutes = mean(FairlyActiveMinutes),
+    mean_lightly_active_minutes = mean(LightlyActiveMinutes),
+    mean_sedentary_minutes = mean(SedentaryMinutes),
+  )
+
+```
+
+On average, the most minutes were spent in the **Sedentary Active** category, followed by **Lightly Active**, **Very Active**, and **Fairly Active**. This pattern is expected, as most of the day is spent inactive. Albeit, the large gap between Sedentary Active and Lightly Active minutes is striking: on average, a total of 991 minutes--or approximately 16 hours and 31 minutes--was spent essentially inactive.
+
+As predicted, **Light Active** minutes rank second, but **participants spent less than 30 minutes on average in Very Active and Fairly Active categories**. These results provide an eye-opening insight into participants' daily activity patterns, showing that most of the day is sedentary with only limited high-intensity activity.
+
+```{r mean daily calories steps, echo=TRUE, error=FALSE, results = FALSE}
+
+mean_daily_total_steps_df <- fitness_data_df %>% 
+  group_by(ActivityDate_Fixed, IsWeekend) %>% 
+  summarize(mean_daily_total_steps = mean(TotalSteps))
+
+
+head(mean_daily_total_steps_df)
+glimpse(mean_daily_total_steps_df)
+
+mean_daily_calories_df <- fitness_data_df %>% 
+  group_by(ActivityDate_Fixed) %>% 
+  summarize(mean_daily_calories = mean(Calories))
+
+
+head(mean_daily_calories_df)
+glimpse(mean_daily_calories_df)
+
+mean_daily_total_steps_calories_df <- merge(mean_daily_total_steps_df, mean_daily_calories_df, by="ActivityDate_Fixed")
+head(mean_daily_total_steps_calories_df)
+glimpse(mean_daily_total_steps_calories_df)
+
+```
+
+## *Correlation between Average Daily Calories and Avery Daily Steps*
+
+In statistics, the [Pearson correlation coefficient](https://www.scribbr.com/statistics/pearson-correlation-coefficient/) (*r*) is a number between -1 and 1 that quantifies the strength and direction of a linear relationship between two variables. Values of *r* close to 1 indicate a strong positive relationship, values close to -1 indicate a strong negative relationship, and values close to 0 represent little to no linear correlation.
+
+```{r correlation mean steps calories, echo=TRUE, error=FALSE}
+
+# Calculating the correlation coefficient between MeanDailyTotalSteps and MeanDailyTotalCalories 
+r_value_calories_steps <- cor(mean_daily_total_steps_calories_df$mean_daily_total_steps, mean_daily_total_steps_calories_df$mean_daily_calories, use="complete.obs")
+
+r_value_calories_steps
+```
+
+The Pearson correlation coefficient between the average daily steps and average daily calories burned is approximately 0.9, which is indicative of a very strong positive linear relationship. In other words, **as steps increase, calories burned tend to increase**.
+
+## *Correlation Matrix for the Daily Activity Dataset*
+
+Next, the relationships between key numeric variables in the Daily Activity dataset were analyzed via a correlation matrix.
+
+```{r activity correlation matrix, echo=TRUE, error=FALSE}
+
+activity_correlation_matrix_df <- fitness_data_df[, c("TotalSteps", "TotalDistance", "VeryActiveMinutes", "FairlyActiveMinutes", "LightlyActiveMinutes", "SedentaryMinutes", "Calories")]
+
+activity_correlation_matrix <- round(cor(activity_correlation_matrix_df), 2)
+print(activity_correlation_matrix)
+```
+
+The Pearson correlation coefficient between *TotalSteps* and *TotalDistance* is about 0.99, which indicates a very strong positive linear relationship. This is to be expected because **the more steps someone takes, the greater distance they travel**.
+
+The Pearson correlation coefficient between *TotalSteps* and *VeryActiveMinutes* is roughly 0.67, which represents a strong positive linear relationship. This demonstrates that people who take more steps tend to have more intense activity.
+
+The Pearson correlation coefficient between *TotalSteps* and *SedentaryMinutes* is approximately -0.16, which denotes a weak negative linear relationship. This follows, as **days with more steps generally include less sedentary time**.
+
+## *Data Analysis on the Daily Sleep Dataset*
+
+Next, the key variables in the Daily Sleep Dataset were analyzed.
+
+## *TotalMinutesAsleep Analysis*
+
+Summary statistics were computed for the *TotalMinutesAsleep* variable--grouped by participant and type of day, respectively.
+
+```{r total minutes asleep, echo=TRUE, error=FALSE, results=FALSE}
+
+# Summary statistics for "TotalMinutesAsleep" (grouped by participant)
+fitness_data_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_total_minutes_asleep = mean(TotalMinutesAsleep, na.rm = TRUE),
+    median_total_minutes_asleep = median(TotalMinutesAsleep, na.rm = TRUE), 
+    sd_total_minutes_asleep = sd(TotalMinutesAsleep, na.rm = TRUE),
+    min_total_minutes_asleep = min(TotalMinutesAsleep, na.rm = TRUE),
+    max_total_minutes_asleep = max(TotalMinutesAsleep, na.rm = TRUE),
+    iqr_total_minutes_asleep = IQR(TotalMinutesAsleep, na.rm = TRUE)
+  )
+
+# Summary statistics for "TotalMinutesAsleep" (grouped by type of day)
+fitness_data_df %>% 
+  group_by(IsWeekend) %>% 
+  summarize(
+    mean_total_minutes_asleep = mean(TotalMinutesAsleep, na.rm = TRUE),
+    median_total_minutes_asleep= median(TotalMinutesAsleep, na.rm = TRUE), 
+    sd_total_minutes_asleep = sd(TotalMinutesAsleep, na.rm = TRUE),
+    min_total_minutes_asleep = min(TotalMinutesAsleep, na.rm = TRUE),
+    max_total_minutes_asleep = max(TotalMinutesAsleep, na.rm = TRUE),
+    iqr_total_minutes_asleep = IQR(TotalMinutesAsleep, na.rm = TRUE)
+  )
+
+```
+
+When arranged type of day, **average minutes spent asleep are slightly higher on weekends than on weekdays**. This could be attributed to people waking up on earlier on weekdays for work or school, fewer obligations on weekends, and biological rhythms which naturally attempt to extend sleep duration on weekends. The **standard deviation of step counts is also greater on weekends**, indicating greater variability in wake-up times or differences in lifestyle habits.
+
+## *A New Feature: The SleepEfficiency Column*
+
+The Daily Sleep dataset includes *TotalMinutesAsleep* and *TotalTimeInBed* columns. While these metrics provide useful insights on their own, calculating **sleep efficiency**--the ratio of total time asleep to total time in bed--enables a better understanding of sleep quality. It can be calculated using the following equation: `(TotalMinutesAsleep  / TotalTimeInBed) * 100`
+
+Sleep efficiency **contextualizes sleep duration by showing how effectively time in bed is used for rest**.
+
+```{r sleep efficiency, echo=TRUE, error=FALSE, results = FALSE}
+
+fitness_data_sleep_df <- fitness_data_df
+
+# Adding in a new column, SleepEfficiency, the ratio of total time asleep to total time in bed 
+fitness_data_sleep_df$SleepEfficiency <- ((fitness_data_sleep_df$TotalMinutesAsleep / fitness_data_sleep_df$TotalTimeInBed) * 100)
+fitness_data_sleep_df
+fitness_data_sleep_df <- na.omit(fitness_data_sleep_df)
+
+
+```
+```{r sleep efficiency preview, echo=FALSE, error=FALSE}
+
+head(fitness_data_sleep_df) 
+
+```
+
+```{r sleep efficiency statistics, echo=TRUE, error=FALSE}
+
+# Summary statistics for "SleepEfficiency" (grouped by participant)
+fitness_data_sleep_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_sleep_efficiency = mean(SleepEfficiency, na.rm = TRUE),
+    median_sleep_efficiency = median(SleepEfficiency, na.rm = TRUE), 
+    sd_sleep_efficiency = sd(SleepEfficiency, na.rm = TRUE),
+    min_sleep_efficiency = min(SleepEfficiency, na.rm = TRUE),
+    max_sleep_efficiency = max(SleepEfficiency, na.rm = TRUE),
+    iqr_sleep_efficiency = IQR(SleepEfficiency, na.rm = TRUE)
+  )
+
+# Summary statistics for "SleepEfficiency" (grouped by type of day)
+fitness_data_sleep_df %>% 
+  group_by(IsWeekend) %>% 
+  summarize(
+    mean_sleep_efficiency = mean(SleepEfficiency, na.rm = TRUE),
+    median_sleep_efficiency = median(SleepEfficiency, na.rm = TRUE), 
+    sd_sleep_efficiency = sd(SleepEfficiency, na.rm = TRUE),
+    min_sleep_efficiency = min(SleepEfficiency, na.rm = TRUE),
+    max_sleep_efficiency = max(SleepEfficiency, na.rm = TRUE),
+    iqr_sleep_efficiency = IQR(SleepEfficiency, na.rm = TRUE)
+  )
+```
+
+Most participants have a sleep efficiency in the high 80s to high 90s percentile, with the exception of two individuals, whose sleep efficiency is notably lower at approximately 67.8% and 63.4%, respectively. When grouped by type of day, **average sleep efficiency is quite uniform between weekdays and weekends**, with weekdays showing a slightly higher value--both averaging around 91%. The standard deviation figures are also similar, indicating that **participants overall maintain  a good and consistent sleep quality**. 
+
+```{r sleep correlation matrix, echo=TRUE, error=FALSE}
+
+sleep_correlation_matrix_df <- fitness_data_sleep_df[, c("TotalMinutesAsleep", "TotalTimeInBed", "SleepEfficiency")]
+
+# Calculating the correlation coefficient between "TotalMinutesAsleep" and "TotalTimeInBed" 
+r_value_minutes_asleep_bed <- cor(fitness_data_sleep_df$TotalMinutesAsleep, fitness_data_sleep_df$TotalTimeInBed, use="complete.obs")
+r_value_minutes_asleep_bed
+
+# Calculating the correlation coefficient between "TotalMinutesAsleep" and "SleepEfficiency" 
+r_value_minutes_alseep__sleep_efficiency <- cor(fitness_data_sleep_df$TotalMinutesAsleep, fitness_data_sleep_df$SleepEfficiency, use="complete.obs")
+r_value_minutes_alseep__sleep_efficiency
+
+# Calculating the correlation coefficient between "TotalTimeInBed" and "SleepEfficiency" 
+r_value_bed_sleep_efficiency <- cor(fitness_data_sleep_df$TotalTimeInBed, fitness_data_sleep_df$SleepEfficiency, use="complete.obs") 
+r_value_bed_sleep_efficiency
+
+sleep_correlation_matrix <- round(cor(sleep_correlation_matrix_df), 2)
+print(sleep_correlation_matrix)
+```
+The Pearson correlation coefficient between *TotalMinutesAsleep* and *TotalTimeInBed* is approximately 0.93, which indicates a very strong positive linear relationship. Therefore, **as time in bed increases, total minutes asleep also increase**.
+
+The Pearson correlation coefficient between *TotalMinutesAsleep* and *SleepEfficiency* is roughly 0.27, which shows a weak positive linear relationship. This suggests that **longer sleep duration is only slightly associated with higher sleep efficiency**. 
+
+The Pearson correlation coefficient between *TotalTimeInBed* and *SleepEfficiency* is approximately -0.09, which signifies a very weak negative linear relationship. This implies that **there is little to no relationship between time spent in bed and sleep quality**. 
+
+## *Data Analysis on the Joint Daily Activity and Daily Sleep Datasets*
+
+Finally, an integrated data analysis was conducted on the merged Daily Activity and Daily Sleep datasets to pinpoint relationships between physical activity and sleep metrics.
+
+## *A New Feature: The StepBand Column*
+
+To enable a deeper analysis of the relationship between Daily Activity and Daily Sleep, a new column *StepBand* was added to the dataframe. Each participant is assigned to one of three step bands--**Low**, **Medium**, or **High**--based on whether their *TotalSteps* count falls below the first quartile, between the first and third quartiles, or above the third quartile of the *TotalSteps* distribution.
+
+```{r step band, echo=TRUE, error=FALSE, results = FALSE}
+
+mean_daily_sleep_efficiency_df <- fitness_data_sleep_df %>% 
+  group_by(ActivityDate_Fixed, IsWeekend) %>% 
+  summarize(mean_daily_sleep_efficiency = mean(SleepEfficiency))
+
+
+head(mean_daily_sleep_efficiency_df)
+glimpse(mean_daily_sleep_efficiency_df)
+
+fitness_data_sleep_df_2 <- fitness_data_sleep_df %>% 
+  select("TotalSteps", "TotalMinutesAsleep", "SleepEfficiency", "IsWeekend")
+
+head(fitness_data_sleep_df_2)
+
+steps_list<- fitness_data_sleep_df_2$TotalSteps
+
+# Determining the first and third quartiles of TotalSteps to better understand the spread of the data 
+q1_steps <- quantile(fitness_data_sleep_df_2$TotalSteps, 0.25)
+q3_steps <- quantile(fitness_data_sleep_df_2$TotalSteps, 0.75)
+
+
+# Adding in a new column, StepBand, which categorizes total steps as Low, Medium, or High relative to the first and third quartiles 
+fitness_data_step_band_df <- fitness_data_sleep_df_2 %>% 
+  mutate(StepBand = case_when (
+    TotalSteps < q1_steps ~ 'Low',
+    TotalSteps > q3_steps ~ 'High',
+    TRUE ~ 'Medium'
+  ))
+
+```
+```{r step band preview, echo=FALSE, error=FALSE}
+
+head(fitness_data_step_band_df) 
+
+```
+## *Correlation between Total Steps, Minutes Asleep, and Sleep Efficiency*
+
+Relationships between key variables across both domains were determined via a correlation matrix.
+
+```{r correlation steps minutes asleep calories sleep efficiency, fig.width = 10, echo=TRUE, error=FALSE}
+
+# Calculating the correlation coefficient between "TotalSteps" and "TotalMinutesAsleep" 
+r_value_steps_minutes_asleep <- cor(fitness_data_sleep_df$TotalSteps, fitness_data_sleep_df$TotalMinutesAsleep, use="complete.obs")
+r_value_steps_minutes_asleep
+
+# Calculating the correlation coefficient between "TotalSteps" and "SleepEfficiency" 
+r_value_steps_sleep_efficiency <- cor(fitness_data_sleep_df$TotalSteps, fitness_data_sleep_df$SleepEfficiency, use="complete.obs")
+r_value_steps_sleep_efficiency
+
+# Calculating the correlation coefficient between "Calories" and "SleepEfficiency" 
+r_value_calories_sleep_efficiency <- cor(fitness_data_sleep_df$Calories, fitness_data_sleep_df$SleepEfficiency, use="complete.obs") 
+r_value_calories_sleep_efficiency
+
+activity_sleep_correlation_matrix_df <- fitness_data_sleep_df [, c("TotalSteps", "TotalDistance", "Calories", "TotalMinutesAsleep", "SleepEfficiency")]
+clean_activity_sleep_correlation_matrix_df <- activity_sleep_correlation_matrix_df  %>%
+  drop_na()
+clean_activity_sleep_correlation_matrix <- round(cor(clean_activity_sleep_correlation_matrix_df), 2)
+print(clean_activity_sleep_correlation_matrix)
+
+
+```
+The Pearson correlation coefficient between the total daily steps and total minutes asleep is approximately -0.19, which indicates a weak negative linear relationship. This suggests that **there is only a slight tendency for higher activity to be associated with shorter sleep duration**, albeit the relationship is minimal.
+
+The Pearson correlation coefficient between the total daily steps and sleep efficiency is roughly -0.11, which represents a very weak negative linear relationship. As such, **there is virtually no association between activity level and sleep quality**. 
+
+The Pearson correlation coefficient between calories burned and sleep efficiency about 0.29, which signifies a weak positive linear relationship. This demonstrates a **modest tendency for higher sleep quality to be associated with greater energy expenditure**.
+
+## *A New Feature: The BehavioralProfile Column*
+
+In order to gauge the distribution of participants using the available activity and sleep data, new *BehavioralProfile* column was added. Similar to the previously introduced *StepBand* column, this feature assigns participants to one of four behavioral profiles: **Lazy Sunday**, **Weekend Warrior**, **Inactive but Sleep Loss**, and **Active but Sleep Loss**.
+
+Profiles are determined according to changes in steps and sleep between weekdays and weekends:
+
+- **Δ Steps** = `mean_weekend_steps - mean_weekday_steps`
+- **Δ Sleep** = `mean_weekend_sleep - mean_weekday_sleep`
+
+Behavioral profiles are assigned as follows:
+
+- `delta_steps < 0 & delta_sleep > 0` → **Lazy Sunday**
+- `delta_steps > 0 & delta_sleep > 0` → **Weekend Warrior**
+- `delta_steps < 0 & delta_sleep < 0` → **Inactive / Poor Sleep**
+- All other cases → **Active but Sleep Loss**
+    
+
+```{r behavioral profile, echo=TRUE, error=FALSE, results = FALSE}
+
+# Calculating the change in steps and minutes asleep using the mean steps and minutes asleep on weekdays and weekends, respectively
+fitness_data_sleep_mean_steps_sleep <- fitness_data_sleep_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_weekday_steps = mean(TotalSteps[!IsWeekend], na.rm=TRUE),
+    mean_weekend_steps = mean(TotalSteps[IsWeekend], na.rm=TRUE), 
+    mean_weekday_sleep = mean(TotalMinutesAsleep[!IsWeekend], na.rm=TRUE),
+    mean_weekend_sleep = mean(TotalMinutesAsleep[IsWeekend], na.rm=TRUE)
+  ) %>% 
+mutate(
+  delta_steps = mean_weekend_steps - mean_weekday_steps,
+  delta_sleep = mean_weekend_sleep - mean_weekday_sleep
+)
+
+
+fitness_data_sleep_mean_steps_sleep <- fitness_data_sleep_mean_steps_sleep %>% 
+  filter(!is.na(delta_steps))
+
+# Adding in a new column, BehavioralProfile, which determines participants' behavioral profile--Lazy Sunday, Weekend Warrior, Inactive / Poor Sleep, or Active but Sleep Loss--based on their DeltaSteps and DeltaSleep values
+fitness_data_sleep_mean_steps_sleep <- fitness_data_sleep_mean_steps_sleep %>% 
+  mutate(BehavioralProfile = case_when (
+    delta_steps < 0 & delta_sleep > 0 ~ 'Lazy Sunday',
+    delta_steps > 0 & delta_sleep > 0 ~ 'Weekend Warrior',
+    delta_steps < 0 & delta_sleep < 0 ~ 'Inactive / Poor Sleep',
+    TRUE ~ 'Active but Sleep Loss'
+  ))
+
+
+```
+
+```{r behavioral profile preview, echo=FALSE, error=FALSE}
+
+head(fitness_data_sleep_mean_steps_sleep[, c("Id", "delta_steps", "delta_sleep", "BehavioralProfile")])
+(fitness_data_sleep_mean_steps_sleep[, c("Id", "delta_steps", "delta_sleep", "BehavioralProfile")])
+
+
+```
+```{r behavioral profile calculation, echo=TRUE, error=FALSE}
+
+# Calculating the number of participants in each behavioral profile
+count_group_df <- fitness_data_sleep_mean_steps_sleep %>% 
+  group_by(BehavioralProfile) %>% 
+  summarize(count_group = n()
+  )
+
+count_group_df
+
+```
+The distribution of behavioral profiles indicates that **Lazy Sunday** and **Active but Sleep*** are the most common, each with 6 participants (30%), followed by **Weekend Warrior** with 5 participants (25%), and **Inactive / Poor Sleep** with 3 participants (15%).  
+
+Participants in the **Lazy Sunday** group **have lesser activity but relatively more sleep**, while those in the **Active but Sleep Loss** group are **physically active but sleep less**. **Weekend Warriors** attain a **balance of activity and sleep**, whereas **Inactive / Poor Sleep** participants show **notable deficits in both**. 
+
+On balance, the fairly even distribution highlights variability in participant behavior, with most individuals falling into unbalanced profiles, suggesting opportunities to improve either activity, sleep, or both.  
+
+
+# **VI. The Share Phase**
+
+During the Share phase, data visualizations are created based on key insights to effectively communicate findings. 
+
+## *Creating Visualizations for the Daily Activity Dataset*
+
+To start, visualizations highlighting the key features and dimensions of the Daily Activity dataset were created. 
+
+## *Step Count By Participant Boxplot*
+
+To start, a boxplot showing step count by participant was generated. Boxplots are effective for comparing multiple groups, identifying outliers, and getting a sense of the overall distribution. Assuming that this dataset consists of adults, the **minimum recommended step count is 10,000 steps**. This boxplot displays which participants are meeting, exceeding, or falling below this recommendation.
+
+```{r step count boxplot by participant, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Boxplot showing the step count by participant
+fitness_data_factor_df <- fitness_data_df
+fitness_data_factor_df$Id <- as.factor(fitness_data_df$Id)
+x_axis_labels <- setNames(1:length(levels(fitness_data_factor_df$Id)), levels(fitness_data_factor_df$Id))
+
+ggplot(data=fitness_data_factor_df, mapping=aes(x=Id, y=TotalSteps, fill=Id))+
+  geom_boxplot()+
+  scale_x_discrete(labels = x_axis_labels)+
+  stat_summary(fun = "mean", geom = "point", shape = 8, size = 2, color= 
+                 "black")+
+  labs(title="Step Count By Participant",
+       subtitle = "Stratified by participant ID. Distribution of total steps, showing the quartiles, outliers, and the mean (denoted by *)",
+       caption = "Participant IDs have been mapped to simplified sequential numbers on the horizontal axis for readability.",
+       x = "Participant ID",
+       y = "Step Count",
+       fill = "Participant ID")+
+  theme_bw()+
+  theme(plot.title = element_text(face ="bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12),
+        plot.caption = element_text(face = "italic", size = 8))
+
+```
+
+## *Overall Step Count During Weekdays and Weekends Boxplot*
+
+Next, a boxplot showing the overall step count, stratified by type of day, was produced. This visualization indicates that **participants take slightly more steps on weekdays compared to weekends on average**. However, the **highest recorded step count appears as an outlier and transpired on a weekend**.
+
+```{r step count boxplot by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Boxplot showing the overall step count, stratified by weekdays and weekends
+ggplot(data=fitness_data_df, mapping=aes(x=IsWeekend, y=TotalSteps, col = IsWeekend))+
+         geom_boxplot()+
+  stat_summary(fun = "mean", geom = "point", shape = 8, size = 2, color= 
+                 "black")+
+  stat_summary(fun = "mean", geom = "text", col = "black", vjust=2.5, aes(label = paste("Mean Step Count:", round(..y.., digits=0))))+
+  labs(title ="Overall Step Count During Weekdays and Weekends",
+       subtitle = "Stratified by day type",
+       x = "Is it a Weekend?",
+       y = "Step Count",
+       color = "Is it a Weekend?")+
+  theme_bw()+
+  theme(plot.title = element_text(face= "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+
+```
+
+## *Overall Distance Traveled During Weekdays and Weekends Boxplot*
+
+Similarly, a boxplot showing the overall distance traveled, stratified by type of day, was generated. As expected, this visualization **closely mirrors the step count distribution**, as distance traveled and step count are directly related metrics. 
+
+```{r distance traveled boxplot by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Boxplot showing the overall distance traveled, stratified by weekdays and weekends
+ggplot(data=fitness_data_df, mapping=aes(x=IsWeekend, y=TotalDistance, col = IsWeekend))+
+  geom_boxplot()+
+  stat_summary(fun = "mean", geom = "point", shape = 8, size = 2, color= 
+                 "black")+
+  stat_summary(fun = "mean", geom = "text", col = "black", vjust=3.0, aes(label = paste("Mean Distance:", round(..y.., digits=2), "mi")))+
+  labs(title ="Overall Distance Traveled During Weekdays and Weekends",
+       subtitle = "Stratified by day type",
+       x = "Is it a Weekend?",
+       y = "Distance (mi)",
+       color = "Is it a Weekend?")+
+  theme_bw()+
+  theme(plot.title = element_text(face= "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+
+```
+
+## *Average Distance Traveled By Activity Level Bar Chart*
+
+Next, a bar chart depicting the average distance traveled, stratified by activity level, was created. The **Lightly Active group recorded the highest average distance traveled**, followed by the Very Active, Moderately Active, and Sedentary Active groups.
+
+```{r distance traveled bar chart by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+distance_data <- fitness_data_df %>% 
+  select("VeryActiveDistance", "ModeratelyActiveDistance", "LightActiveDistance", "SedentaryActiveDistance", "IsWeekend")
+head(distance_data)
+glimpse(distance_data)
+
+# Converting "Distance Data" to long format to facilitate data visualization 
+long_distance <- pivot_longer(distance_data,
+                              cols = c("VeryActiveDistance", "ModeratelyActiveDistance", "LightActiveDistance", "SedentaryActiveDistance"),
+                              names_to = ("DistanceType"),
+                              values_to = ("Distance"))
+head(long_distance)
+glimpse(long_distance)
+
+# Bar chart showing the average distance traveled, stratified by activity level
+ggplot(data = long_distance, mapping = aes(x = DistanceType, y = Distance, fill=DistanceType))+
+  geom_bar(position = "dodge", stat = "summary", fun = "mean")+
+  stat_summary(fun = "mean", geom = "text", col = "black", vjust=2.0, aes(label = paste("Avg. Distance:", round(..y.., digits=3), "mi")))+
+  scale_fill_manual(values = c("lightcoral", "indianred", "mistyrose", "darkred"),
+                               labels = c("Light Active", "Moderately Active", "Sedentary Active", "Very Active"))+
+  scale_x_discrete(
+    labels = c("Light Active", "Moderately Active", "Sedentary Active", "Very Active")
+  )+
+  scale_color_discrete(labels = c("Light Active", "Moderately Active", "Sedentary Active", "Very Active"))+
+  labs(title="Average Distance Traveled By Activity Level",
+       subtitle = "Stratified by activity level",
+       caption = "Activity levels are defined based on the total distance traveled / steps taken per day: Sedentary Active, Light Active, Moderately Active, and Very Active.",
+       x = "Activity Level",
+       y = "Distance (mi)",
+       fill = "Activity Level")+
+  theme_bw()+
+  theme(plot.title = element_text(face= "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12),
+        plot.caption = element_text(face = "italic", size = 8))
+
+
+```
+
+## *Average Minutes Active By Activity Level Bar Chart*
+
+Likewise, a bar chart depicting the average minutes active, stratified by activity level, was generated. The **Sedentary Active group recorded the highest average minutes by a substantial margin**, followed by the Moderately Active, Very Active, and Lightly Active groups.
+
+```{r average minutes active bar chart by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+minutes_data <- fitness_data_df %>% 
+  select("VeryActiveMinutes", "FairlyActiveMinutes", "LightlyActiveMinutes", "SedentaryMinutes", "IsWeekend")
+
+long_minutes <- pivot_longer(minutes_data,
+                              cols = c("VeryActiveMinutes", "FairlyActiveMinutes", "LightlyActiveMinutes", "SedentaryMinutes"),
+                              names_to = ("MinuteType"),
+                              values_to = ("Minutes"))
+
+# Bar chart showing the average minutes active, stratified by activity level
+ggplot(data = long_minutes, mapping = aes(x = MinuteType, y = Minutes, fill=MinuteType))+
+  geom_bar(position = "dodge", stat = "summary", fun = "mean")+
+  stat_summary(fun = "mean", geom = "text", col = "black", vjust=2.0, aes(label = paste("Avg. Minutes:", round(..y.., digits=2), "min")))+
+  scale_fill_manual(values = c("lightcoral", "indianred", "mistyrose", "darkred"),
+                    labels = c("Light Active", "Moderately Active", "Sedentary Active", "Very Active"))+
+  scale_x_discrete(
+    labels = c("Light Active", "Moderately Active", "Sedentary Active", "Very Active")
+  )+
+  scale_color_discrete(labels = c("Light Active", "Moderately Active", "Sedentary Active", "Very Active"))+
+  labs(title ="Average Minutes Active By Activity Level",
+       subtitle = "Stratified by activity level",
+       x = "Activity Level",
+       y = "Minutes",
+       fill = "Activity Level")+
+  theme_bw()+
+  theme(plot.title = element_text(face= "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+```
+
+## *Average Daily Step Count Over One Month Line Chart*
+
+Next, a line chart showcasing the daily step count, stratified by type of day--with red and blue lines representing weekdays and weekends, respectively--was generated. Since the data spans a period of time, a line chart is the most appropriate visualization to use. The **weekend trend shows a marked decline in step counts, with the lowest values occurring on Sundays**--supporting the **Lazy Sunday** behavioral profile. 
+
+```{r average daily step count line chart by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Line chart showing the average daily step count, stratified by type of day
+ggplot(data = mean_daily_total_steps_df, mapping = aes(x = ActivityDate_Fixed, y = mean_daily_total_steps, color=IsWeekend))+
+  geom_line()+
+  geom_point()+
+  labs(title = "Average Daily Step Count Over One Month",
+       subtitle = "Stratified by day type",
+       x = "Date",
+       y = "Step Count",
+       col = "Is it a Weekend?")+
+  theme_bw()+
+  theme(plot.title = element_text(face= "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+```
+
+## *Average Daily Calories Burned by Average Daily Total Steps Scatterplot*
+
+Subsequently, a scatterplot chart highlighting the relationship between average daily calories burned and average daily total steps, stratified by type of day, was created. Since the goal was to evaluate the correlation between two continuous variables, a scatterplot is the most appropriate visualization. A **linear regression line was also drawn to represent the line of best fit**. Points that lie **close to the line denote a strong linear relationship, whereas father from the line indicate greater variability and a weaker association between the variables**.
+
+```{r average daily calories and average daily total steps count scatterplot type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Scatterplot showing the relationship between average daily calories burned and average daily total steps, stratified by type of day
+ggplot(data = mean_daily_total_steps_calories_df, mapping = aes(x = mean_daily_total_steps, y = mean_daily_calories))+
+  geom_point(aes(color = IsWeekend))+
+  geom_smooth(method = "lm", se = FALSE, color="black")+
+  labs(title = "Average Daily Calories Burned by Average Daily Total Steps",
+       subtitle = "Stratified by day type",
+       caption = paste0("The Pearson correlation coefficient of r = ", round(r_value_calories_steps, 2), " suggests a very strong positive relationship between total calories burned and total steps."),
+       x = "Step Count",
+       y = "Calories Burned (kcal)",
+       color = "Is it a Weekend?")+
+  theme_bw()+
+  theme(plot.title = element_text(face= "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12),
+        plot.caption = element_text(face = "italic", size = 9))
+```
+
+## *Correlation Matrix for the Daily Activity Dataset*
+
+Finally, a correlation matrix, which examines the relationship between the variables in the Daily Activity dataset, was generated. In the matrix, **darker colors represent strong correlations, while lighter colors indicate weaker correlations**.   
+
+```{r daily activity correlation matrix, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Heatmap showing the relationship between key variables in the "Daily Activity" dataset
+ggcorrplot(activity_correlation_matrix, hc.order = TRUE, type = "upper",
+           title = "Correlation Matrix for the Daily Activity Dataset",
+           lab = TRUE, 
+           lab_col ="black",
+           lab_size = 2, ggtheme = theme_grey,
+           outline.color = "black",
+           colors= c("lightskyblue", "white", "indianred"))+
+  theme(plot.title = element_text(face="bold", size = 14))
+
+```
+
+## *Creating Visualizations for the Daily Sleep Dataset*
+
+Next, visualizations highlighting the key features and dimensions of the Daily Sleep dataset were produced. 
+
+## *Minutes Asleep By Participant Boxplot*
+
+First, a boxplot depicting the minutes asleep by participant was produced. Assuming that this dataset consists of adults, the **minimum recommended sleep duration is 420 minutes (7 hours)**. This boxplot shows which participants are meeting, exceeding, or falling below this recommendation.
+
+```{r minutes asleep boxplot by participant, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+x_axis_labels <- setNames(1:length(levels(fitness_data_factor_df$Id)), levels(fitness_data_factor_df$Id))
+
+# Boxplot showing the minutes spent asleep, stratified by participant ID
+ggplot(data=fitness_data_factor_df, mapping=aes(x=Id, y=TotalMinutesAsleep, fill=Id))+
+  geom_boxplot()+
+  scale_x_discrete(labels = x_axis_labels)+
+  stat_summary(fun = "mean", geom = "point", shape = 8, size = 2, color= 
+                 "black")+
+  labs(title = "Minutes Asleep By Participant",
+       subtitle = "Stratified by participant ID",
+       caption = "Participant IDs have been mapped to simplified sequential numbers on the horizontal axis for readability.",
+       x = "Participant ID",
+       y = "Minutes",
+       fill = "Participant ID")+
+theme_bw()+
+  theme(plot.title = element_text(face ="bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+```
+
+## *Minutes Asleep During Weekdays and Weekends Boxplot*
+
+Next, a boxplot showing the overall minutes spent asleep, stratified by type of day, was produced. This visualization indicates that **participants, on average, get slightly more sleep on weekends than on weekdays**. However, the **highest sleep duration appears as an outlier and transpired on a weekday**. 
+
+```{r minutes asleep boxplot by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Boxplot showing the minutes spent asleep, stratified by type of day 
+ggplot(data=fitness_data_df, mapping=aes(x=IsWeekend, y=TotalMinutesAsleep, col = IsWeekend))+
+  geom_boxplot()+
+  stat_summary(fun = "mean", geom = "point", shape = 8, size = 2, color= 
+                 "black")+
+  stat_summary(fun = "mean", geom = "text", col = "black", vjust=2.5, aes(label = paste("Mean Minutes Asleep:", round(..y.., digits=2))))+
+  labs(title= "Minutes Asleep During Weekdays and Weekends",
+       subtitle = "Stratified by day type",
+       x = "Is it a Weekend?",
+       y = "Minutes Asleep",
+       col = "Is it a Weekend?")+ 
+  theme_bw()+
+  theme(plot.title = element_text(face="bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+
+```
+
+## *Average Daily Minutes Asleep Over One Month Line Chart*
+
+Next, a line chart depicting the average daily minutes asleep over one month, stratified by type of day, was created. The weekend trend shows a **considerable peak--particularly on Sundays--where the highest values on the chart occur**, further reinforcing the **Lazy Sunday** behavioral profile. 
+
+```{r average daily minutes asleep by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+fitness_data_mean_df <- fitness_data_df %>% 
+  group_by(ActivityDate_Fixed, IsWeekend) %>% 
+  summarize(
+    mean_total_minutes_asleep = mean(TotalMinutesAsleep, na.rm = TRUE)
+  )
+# Line chart showing the average daily minutes spent asleep over one month, stratified by type of day
+ggplot(data=fitness_data_mean_df, mapping=aes(x=ActivityDate_Fixed, y=mean_total_minutes_asleep, col = IsWeekend))+
+  geom_line()+
+  geom_point()+
+  labs(title = "Average Daily Minutes Asleep Over One Month",
+       subtitle = "Stratified by day type",
+       x = "Date",
+       y = "Step Count",
+       col = "Is it a Weekend?")+
+  theme_bw()+
+  theme(plot.title = element_text(face= "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+```
+
+## *Overall Sleep Efficiency During Weekdays and Weekends Boxplot*
+
+Then, a boxplot displaying overall sleep efficiency, stratified by type of day, was generated. **Sleep quality appears relatively consistent irrespective of whether it it is a weekday or weekend**, though it is slightly higher on weekdays. 
+
+```{r sleep efficiency by type of day, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Boxplot showing the overall sleep efficiency, stratified by type of day
+ggplot(data=fitness_data_sleep_df, mapping=aes(x=IsWeekend, y=SleepEfficiency, col = IsWeekend))+
+  geom_boxplot()+
+  stat_summary(fun = "mean", geom = "point", shape = 8, size = 2, color= 
+                 "black")+
+  stat_summary(fun = "mean", geom = "text", col = "black", vjust=2.0, aes(label = paste("Mean Sleep Efficiency %:", round(..y.., digits=2))))+
+  labs(title ="Overall Sleep Efficiency During Weekdays and Weekends",
+       subtitle = "Stratified by day type",
+       x = "Is it a Weekend?",
+       y = "Sleep Efficiency (%)",
+       col = "Is it a Weekend?")+
+  theme_bw()+
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+```
+
+## *Correlation Matrix for the Daily Sleep Dataset*
+
+Finally, a correlation matrix, which surveys the relationship between the variables in the Daily Sleep dataset, was created.
+
+```{r daily sleep correlation matrix, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+ggcorrplot(sleep_correlation_matrix, hc.order = TRUE, type = "upper",
+           title = "Correlation Matrix for the Daily Sleep Dataset",
+           lab = TRUE, 
+           lab_col ="black",
+           lab_size = 2, ggtheme = theme_grey,
+           outline.color = "black",
+           colors= c("lightskyblue", "white", "indianred"))+
+  theme(plot.title = element_text(face="bold", size = 14))
+
+```
+
+## *Creating Visualizations for the Joint Daily Activity and Daily Sleep Datasets*
+
+To conclude the Share phase, visualizations highlighting the relationships between key variables in the merged Daily Activity and Daily Sleep datasets were created. 
+
+## *Minutes Asleep By Sleep Efficiency Scatterplot*
+
+First, a scatterplot chart highlighting the relationship between total minutes asleep and sleep efficiency, stratified by step band, was created. While grouping the data in this way links step count to sleep quality, **step band does not appear to be a significant driver of sleep efficiency**. Nevertheless, the chart suggests that **sleep efficiency tends to improve as total sleep duration increases**.
+
+```{r minutes asleep by sleep efficiency scatterplot by step band, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+r_value_minutes_asleep_sleep_efficiency <- fitness_data_step_band_df %>% 
+  summarize(
+    cor(fitness_data_step_band_df$TotalMinutesAsleep, fitness_data_step_band_df$SleepEfficiency, use="complete.obs")
+  )
+
+# Scatterplot showing the relationship between total minutes spent asleep and sleep efficiency, stratified by step bands
+ggplot(data = fitness_data_step_band_df, mapping = aes(x = TotalMinutesAsleep, y=SleepEfficiency, color = StepBand))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, color="black")+
+  labs(title = "Minutes Asleep By Sleep Efficiency",
+       subtitle = "Stratified by step band",
+       caption = paste0("Sleep efficiency is the ratio of total time asleep to total time in bed. The Pearson correlation coefficient of r = ", round(r_value_minutes_asleep_sleep_efficiency, 2), " suggests a weak positive relationship between minutes asleep and sleep efficiency."),
+       x = "Minutes Asleep",
+       y = "Sleep Efficiency (%)",
+       color = "Step Band")+
+  theme_bw()+
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12),
+        plot.caption = element_text(face = "italic", size = 8))
+```
+
+## *Correlation Matrix for the Merged Daily Activity and Daily Sleep Datasets*
+
+Next, a correlation matrix, which analyzes the relationship between the variables across both datasets, was generated.
+
+```{r daily activity sleep correlation matrix, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Heatmap showing the relationship between key variables in the "Activity-Sleep" dataset
+ggcorrplot(clean_activity_sleep_correlation_matrix, hc.order = TRUE, type = "upper",
+           title = "Correlation Matrix for the Activity-Sleep Dataset",
+           lab = TRUE, 
+           lab_col ="black",
+           lab_size = 2, ggtheme = theme_grey,
+           outline.color = "black",
+           colors= c("lightskyblue", "white", "indianred"))+
+  theme(plot.title = element_text(face="bold", size = 14))
+
+```
+
+## *Minutes Asleep by Sleep Efficiency Scatterplot*
+
+Next, a scatterplot highlighting the relationship between daily total steps and daily sleep efficiency, stratified by participant, was produced. Even though step count varies significantly across participants it has negligible relationship with sleep quality, indicating that **higher physical activities levels do not innately result in improved sleep efficiency**. 
+
+```{r average daily total steps and daily sleep efficiency scatterplot participant, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+x_axis_labels <- setNames(1:length(levels(fitness_data_sleep_df$Id)), levels(fitness_data_sleep_df$Id))
+
+# Scatterplot showing the relationship between daily total steps and daily sleep efficiency, stratified by participant 
+ggplot(data = fitness_data_sleep_df, mapping = aes(x = TotalSteps, y = SleepEfficiency, col=factor(Id)))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, color="black")+
+  labs(title = "Daily Sleep Efficiency by Daily Total Steps",
+       subtitle = "Stratified by participant ID",
+       caption = paste0("The Pearson correlation coefficient of r = ", round(r_value_steps_minutes_asleep, 2), " suggests a very weak negative relationship between sleep efficiency and total steps."),
+       x = "Step Count",
+       y = "Sleep Efficiency (%)",
+       color = "Participant ID")+
+theme_bw()+
+  theme(plot.title = element_text(face = "bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12),
+        plot.caption = element_text(face = "italic", size = 8))
+```
+
+## *Percentage Distribution of Participants' Activity-Sleep Behavioral Profiles Bar Chart*
+
+Subsequently, a bar chart displaying the percentage distribution of participants' activity-sleep behavioral profiles was created. These behavioral profiles unite step count and minutes asleep into a single composite behavioral classification. To this end, the most common behavioral profiles pinpointed are **Lazy Sunday** and **Active but Sleep Loss**. 
+
+```{r percentage distribution of behavioral profiles, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+fitness_data_sleep_mean_steps_sleep <- fitness_data_sleep_df %>% 
+  group_by(Id) %>% 
+  summarize(
+    mean_weekday_steps = mean(TotalSteps[!IsWeekend], na.rm=TRUE),
+    mean_weekend_steps = mean(TotalSteps[IsWeekend], na.rm=TRUE), 
+    mean_weekday_sleep = mean(TotalMinutesAsleep[!IsWeekend], na.rm=TRUE),
+    mean_weekend_sleep = mean(TotalMinutesAsleep[IsWeekend], na.rm=TRUE)
+  ) %>% 
+mutate(
+  delta_steps = mean_weekend_steps - mean_weekday_steps,
+  delta_sleep = mean_weekend_sleep - mean_weekday_sleep
+)
+
+
+fitness_data_sleep_mean_steps_sleep <- fitness_data_sleep_mean_steps_sleep %>% 
+  filter(!is.na(delta_steps))
+
+fitness_data_sleep_mean_steps_sleep <- fitness_data_sleep_mean_steps_sleep %>% 
+  mutate(BehavioralProfile = case_when (
+    delta_steps < 0 & delta_sleep > 0 ~ 'Lazy Sunday',
+    delta_steps > 0 & delta_sleep > 0 ~ 'Weekend Warrior',
+    delta_steps < 0 & delta_sleep < 0 ~ 'Inactive / Poor Sleep',
+    TRUE ~ 'Active but Sleep Loss'
+  ))
+
+count_group_percentage_df <- fitness_data_sleep_mean_steps_sleep %>% 
+  group_by(BehavioralProfile) %>% 
+  summarize(count_group = n(),
+            percentage = (count_group / nrow(fitness_data_sleep_mean_steps_sleep)) * 100
+)
+
+# Bar chart showing the percentage distribution of behavioral profiles
+ggplot(data = count_group_percentage_df, mapping = aes(x = BehavioralProfile, y = percentage, fill=BehavioralProfile))+
+  geom_bar(stat="identity")+
+  labs(title = "Percentage Distribution of Participants' Activity-Sleep Behavioral Profiles",
+       caption = "A participant's behavioral profile is determined using the change in steps and change in minutes asleep.",
+       x = "Behavioral Profile", 
+       y = "Percentage of Participants (%)",
+       fill = "Behavioral Profile")+
+  theme_bw()+
+  theme(plot.title = element_text(face="bold", size = 14),
+        plot.caption = element_text(face = "italic", size = 8))
+
+```
+
+## *Change in Minutes Asleep By Change in Total Steps Scatterplot*
+
+Finally, a scatterplot displaying the change in minutes asleep relative to the change in total steps for each participant, stratified by behavioral profile, was produced. Even though it is technically a scatterplot, the chart resembles a Cartesian plane, making it easy to identify the quadrant in which each participant falls. Simply put, **each individual in the study is represented by a dot, with the color corresponding to their behavioral profile**.
+
+```{r  delta minutes asleep by the delta steps per participant, by behavioral profile, fig.width = 10, fig.height = 6, dpi = 300, echo=FALSE, error=FALSE}
+
+# Scatterplot showing the change in minutes asleep by the change in total steps per participant, stratified by behavioral profile
+ggplot(data = fitness_data_sleep_mean_steps_sleep, mapping = aes(x = delta_steps, y = delta_sleep, color=BehavioralProfile))+
+  geom_point()+
+  geom_vline(xintercept = 0)+
+  geom_hline(yintercept = 0)+
+  labs(title = "Change in Minutes Asleep By Change in Total Steps",
+       subtitle = "Stratified by behavioral profile",
+       x = "Δ Total Steps", 
+       y = "Δ Minutes ASleep",
+       color = "Behavioral Profile")+
+  theme_bw()+
+  theme(plot.title = element_text(face ="bold", size = 14),
+        plot.subtitle = element_text(face = "italic", size = 12))
+
+```
+
+
+# **VII. The Act Phase**
+
+During the Act phase, the obtained insights are applied to inform recommendations and business decisions. 
+
+## *Recommendation 1: Implement a Reminder System to Encourage Weekend Activity*
+
+The analysis uncovered that users are typically less active and sleep more on Sundays. While rest is important, encouraging light physical activity on weekends can help maintain overall health. Therefore, it is recommended that **the Leaf app utilizes users' weekend activity data to send time, gentle reminders throughout the day**. These notifications would endorse movement--such as short walks, stretching, or light exercise--while still respecting users' rest periods. This feature strives to **increase Leaf usage and weekend engagement, as well as support healthier, more balanced activity patterns**.
+
+## *Recommendation 2: Implement Personalized Sleep Quality Guidance*
+
+The analysis revealed that sleep efficiency improves with longer sleep, although some participants exhibited irregular sleep patterns. To address this, it is recommended that **the Leaf app provides personalized notifications, such as bedtime reminders, guided relaxation exercises, or activity-based sleep suggestions**. These features would **promote healthier sleep habits, enhance overall sleep quality, strengthen user trust in Leaf's data driven guidance, and potentially increase adoption of premium features**. 
+
+## *Recommendation 3: Implement a Behavioral Profile System* 
+
+One of the crucial features developed for this analysis was the behavioral profile classification, which categorized participants based on changes in minutes asleep relative to changes in total steps. To leverage these insights, it is recommended that **the Leaf app implement a behavioral profile system that classifies users according to their activity-sleep patterns and customizes the user experience accordingly**. For example, users identified as **Lazy Sunday** could receive notifications encouraging light weekend activity, while those classified as **Active but Sleep Loss** could receive sleep-focused guidance and recovery recommendations. By delivering personalized and behavior-based insights, the company **can enhance user engagement, improve retention, and extend the perceived value of the Leaf wearable**.
+
+# **VIII. Conclusion**
+
+Over the course of the Bellabeat Case Study project, health data--including activity and sleep metrics--was cleaned, processed were cleaned, processed, analyzed, and visualized. This analysis uncovered meaningful patterns and relationships within and across datasets, providing actionable insights into user behavior. These insights informed three business recommendations designed to improve user engagement, support healthier habits, and increase the overall value of the **Leaf** device. Bu implementing these recommendations, Bellabeat can harness data-driven strategies to strengthen user experience, prompt long-term retention, and reinforce its position as a leader in women's wellness technology. 
+
+
