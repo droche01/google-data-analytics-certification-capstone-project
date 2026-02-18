@@ -86,7 +86,7 @@ During the Process phase, the tools used for analysis are determined, and the da
 
 ## *Analysis Tools*
 
-There are a variety of tools that can be utilized for data analysis,including Microsoft Excel, SQL, Python, and R. Often, a data analysis workflow spans numerous programs, with each tool serving a unique purpose.For this analysis, Microsoft Excel was used for initial data cleaning and basic feature engineering, while R was selected for more complex dataset preprocessing, feature engineering, and dataset transformation tasks.
+There are a variety of tools that can be utilized for data analysis, including Microsoft Excel, SQL, Python, and R. Often, a data analysis workflow spans numerous programs, with each tool serving a unique purpose.For this analysis, Microsoft Excel was used for initial data cleaning and basic feature engineering, while R was selected for more complex dataset preprocessing, feature engineering, and dataset transformation tasks.
 
 ## *Initial Data Cleaning and Feature Engineering in Microsoft Excel*
 
@@ -496,7 +496,7 @@ print(activity_correlation_matrix)
 
 The Pearson correlation coefficient between *TotalSteps* and *TotalDistance* is about 0.99, which indicates a very strong positive linear relationship. This is to be expected because **the more steps someone takes, the greater distance they travel**.
 
-The Pearson correlation coefficient between *TotalSteps* and *VeryActiveMinutes* is roughly 0.67, which represents a strong positive linear relationship. This demonstrates that people who take more steps tend to have more intense activity.
+The Pearson correlation coefficient between *TotalSteps* and *VeryActiveMinutes* is roughly 0.67, which represents a strong positive linear relationship. This demonstrates that **people who take more steps tend to have more intense activity**.
 
 The Pearson correlation coefficient between *TotalSteps* and *SedentaryMinutes* is approximately -0.16, which denotes a weak negative linear relationship. This follows, as **days with more steps generally include less sedentary time**.
 
@@ -1266,6 +1266,6 @@ One of the crucial features developed for this analysis was the behavioral profi
 
 # **VIII. Conclusion**
 
-Over the course of the Bellabeat Case Study project, health data--including activity and sleep metrics--was cleaned, processed were cleaned, processed, analyzed, and visualized. This analysis uncovered meaningful patterns and relationships within and across datasets, providing actionable insights into user behavior. These insights informed three business recommendations designed to improve user engagement, support healthier habits, and increase the overall value of the **Leaf** device. Bu implementing these recommendations, Bellabeat can harness data-driven strategies to strengthen user experience, prompt long-term retention, and reinforce its position as a leader in women's wellness technology. 
+Over the course of the Bellabeat Case Study project, health data--including activity and sleep metrics--was cleaned, processed were cleaned, processed, analyzed, and visualized. This analysis uncovered meaningful patterns and relationships within and across datasets, providing actionable insights into user behavior. These insights informed three business recommendations designed to improve user engagement, support healthier habits, and increase the overall value of the **Leaf** device. By implementing these recommendations, Bellabeat can harness data-driven strategies to strengthen user experience, prompt long-term retention, and reinforce its position as a leader in women's wellness technology. 
 
 
