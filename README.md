@@ -41,7 +41,7 @@ Click on the ``DylanRoche_GoogleDataAnalyticsCertification_CapstoneProject_Febru
     ```r
    install.packages(c("tidyverse", "dplyr", "ggplot2", "ggpubr", "ggcorrplot"))
 5. Render the report:
-Open the ``DylanRoche_GoogleDataAnalyticsCertification_CapstoneProject_February2026.Rmd`` file in RStudio and click the **Knit** button at the top left-hand side of the editor. This will process the code and generate the final ``index.html`` report.
+Open the ``index.Rmd`` file in RStudio and click the **Knit** button at the top left-hand side of the editor. This will process the code and generate the final ``index.html`` report.
 
 ## Analysis Highlights
 - Dataset cleaning, preprocessing, and outlier detection 
